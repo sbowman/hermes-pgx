@@ -52,13 +52,16 @@ type Conn interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
-// Connect creates a pgx database connection pool and returns it.
 func Connect(uri string) (Conn, error) {
 	config, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, err
 	}
-
+	
+	return ConnectConfig(config)
+}
+// Connect creates a pgx database connection pool and returns it.
+func ConnectConfig(config *pgxpool.Config) (Conn, error) {
 	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		dtMutex.RLock()
 		defer dtMutex.RUnlock()
