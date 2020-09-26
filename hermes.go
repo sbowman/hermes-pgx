@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
@@ -48,20 +49,23 @@ type Conn interface {
 	// Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error)
 
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (commandTag pgconn.CommandTag, err error)
+	Get(ctx context.Context, dest interface{}, sql string, arguments ...interface{}) error
+	Select(ctx context.Context, dest interface{}, sql string, arguments ...interface{}) error
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
-func Connect(uri string) (Conn, error) {
+func Connect(uri string) (*DB, error) {
 	config, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return ConnectConfig(config)
 }
+
 // Connect creates a pgx database connection pool and returns it.
-func ConnectConfig(config *pgxpool.Config) (Conn, error) {
+func ConnectConfig(config *pgxpool.Config) (*DB, error) {
 	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		dtMutex.RLock()
 		defer dtMutex.RUnlock()
@@ -140,4 +144,15 @@ func (tx *Tx) Begin(ctx context.Context) (Conn, error) {
 // Any other failure of a real transaction will result in the connection being closed.
 func (tx *Tx) Close(ctx context.Context) error {
 	return tx.Tx.Rollback(ctx)
+}
+
+// Get a single record from the database
+func (tx *Tx) Get(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
+	return pgxscan.Get(ctx, tx.Tx, dest, sql, args...)
+}
+
+// Select a collection of records from the database
+func (tx *Tx) Select(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
+	return pgxscan.Select(ctx, tx.Tx, dest, sql, args...)
+
 }
