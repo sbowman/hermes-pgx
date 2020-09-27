@@ -119,6 +119,16 @@ func (db *DB) Close(context.Context) error {
 	return nil
 }
 
+// Get a single record from the database
+func (db *DB) Get(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
+	return pgxscan.Get(ctx, db.Pool, dest, sql, args...)
+}
+
+// Select a collection of records from the database
+func (db *DB) Select(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
+	return pgxscan.Select(ctx, db.Pool, dest, sql, args...)
+}
+
 // Tx wraps the pgx.Tx interface and provides the missing hermes function wrappers.
 type Tx struct {
 	pgx.Tx
@@ -154,5 +164,4 @@ func (tx *Tx) Get(ctx context.Context, dest interface{}, sql string, args ...int
 // Select a collection of records from the database
 func (tx *Tx) Select(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
 	return pgxscan.Select(ctx, tx.Tx, dest, sql, args...)
-
 }
