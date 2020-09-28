@@ -31,6 +31,9 @@ type Conn interface {
 	// transaction.
 	Commit(ctx context.Context) error
 
+	// Rollback the transaction. Does nothing if Conn is a *pgxpool.Pool.
+	Rollback(ctx context.Context) error
+
 	// Close rolls back the transaction if this is a real transaction or rolls back to the
 	// savepoint if this is a pseudo nested transaction.  For a *pgxpool.Pool, this call is
 	// ignored.
@@ -111,6 +114,11 @@ func (db *DB) Begin(ctx context.Context) (Conn, error) {
 
 // Commit does nothing.
 func (db *DB) Commit(context.Context) error {
+	return nil
+}
+
+// Rollback does nothing
+func (db *DB) Rollback(ctx context.Context) error {
 	return nil
 }
 
