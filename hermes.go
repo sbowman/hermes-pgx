@@ -2,9 +2,10 @@ package hermes
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"sync"
 
-	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
@@ -52,8 +53,6 @@ type Conn interface {
 	// Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error)
 
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (commandTag pgconn.CommandTag, err error)
-	Get(ctx context.Context, dest interface{}, sql string, arguments ...interface{}) error
-	Select(ctx context.Context, dest interface{}, sql string, arguments ...interface{}) error
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
@@ -118,23 +117,13 @@ func (db *DB) Commit(context.Context) error {
 }
 
 // Rollback does nothing
-func (db *DB) Rollback(ctx context.Context) error {
+func (db *DB) Rollback(_ context.Context) error {
 	return nil
 }
 
 // Close does nothing.
 func (db *DB) Close(context.Context) error {
 	return nil
-}
-
-// Get a single record from the database
-func (db *DB) Get(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
-	return pgxscan.Get(ctx, db.Pool, dest, sql, args...)
-}
-
-// Select a collection of records from the database
-func (db *DB) Select(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
-	return pgxscan.Select(ctx, db.Pool, dest, sql, args...)
 }
 
 // Tx wraps the pgx.Tx interface and provides the missing hermes function wrappers.
@@ -164,12 +153,12 @@ func (tx *Tx) Close(ctx context.Context) error {
 	return tx.Tx.Rollback(ctx)
 }
 
-// Get a single record from the database
-func (tx *Tx) Get(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
-	return pgxscan.Get(ctx, tx.Tx, dest, sql, args...)
+// NoRows returns true if the supplied error is one of the NoRows indicators
+func NoRows(err error) bool {
+	return errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows)
 }
 
-// Select a collection of records from the database
-func (tx *Tx) Select(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
-	return pgxscan.Select(ctx, tx.Tx, dest, sql, args...)
+// RowScanner is a shared interface between pgx.Rows and pgx.Row
+type RowScanner interface {
+	Scan(dest ...interface{}) error
 }
