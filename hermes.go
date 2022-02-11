@@ -57,7 +57,6 @@ type Conn interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
-// Connect creates a pgx database connection pool and returns it.
 func Connect(uri string) (*DB, error) {
 	config, err := pgxpool.ParseConfig(uri)
 	if err != nil {
@@ -67,7 +66,7 @@ func Connect(uri string) (*DB, error) {
 	return ConnectConfig(config)
 }
 
-// ConnectConfig creates a pgx connection pool from the supplied config.
+// Connect creates a pgx database connection pool and returns it.
 func ConnectConfig(config *pgxpool.Config) (*DB, error) {
 	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		dtMutex.RLock()
@@ -122,9 +121,8 @@ func (db *DB) Rollback(_ context.Context) error {
 	return nil
 }
 
-// Close the underlying pool.
+// Close does nothing.
 func (db *DB) Close(context.Context) error {
-	db.Pool.Close()
 	return nil
 }
 
