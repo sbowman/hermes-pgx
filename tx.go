@@ -9,6 +9,13 @@ import (
 // Tx wraps the pgx.Tx interface and provides the missing hermes function wrappers.
 type Tx struct {
 	pgx.Tx
+	db *DB // so the transaction can open a new database connection
+}
+
+// Open returns the underlying database connection pool stored in the Tx.  This essentially creates
+// a new database connection for separate use in the middle of a transaction.
+func (tx *Tx) Open() (Conn, error) {
+	return tx.db, nil
 }
 
 // Begin starts a pseudo nested transaction.
@@ -18,7 +25,7 @@ func (tx *Tx) Begin(ctx context.Context) (Conn, error) {
 		return nil, err
 	}
 
-	return &Tx{newTx}, nil
+	return &Tx{newTx, tx.db}, nil
 }
 
 // Close rolls back the transaction if this is a real transaction or rolls back to the

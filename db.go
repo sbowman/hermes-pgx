@@ -11,6 +11,12 @@ type DB struct {
 	*pgxpool.Pool
 }
 
+// Open just returns itself, since using the database connection pool for anything will open a new
+// connection.
+func (db *DB) Open() (Conn, error) {
+	return db, nil
+}
+
 // Begin a new transaction.
 func (db *DB) Begin(ctx context.Context) (Conn, error) {
 	tx, err := db.Pool.Begin(ctx)
@@ -18,7 +24,7 @@ func (db *DB) Begin(ctx context.Context) (Conn, error) {
 		return nil, err
 	}
 
-	return &Tx{tx}, nil
+	return &Tx{tx, db}, nil
 }
 
 // Commit does nothing.

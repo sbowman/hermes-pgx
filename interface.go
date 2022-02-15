@@ -15,6 +15,10 @@ import (
 // It's also useful for testing, as you can pass a transaction into any database-related function,
 // don't commit, and simply Close() at the end of the test to clean up the database.
 type Conn interface {
+	// Open a new database connection.  This can be helpful if you're in the middle of a query
+	// or transaction, and you need a second database connection.
+	Open() (Conn, error)
+
 	// Begin starts a transaction.  If Conn already represents a transaction, pgx will create a
 	// savepoint instead.
 	Begin(ctx context.Context) (Conn, error)
