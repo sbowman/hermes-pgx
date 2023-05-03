@@ -13,6 +13,10 @@ type Tx struct {
 
 // Begin starts a pseudo nested transaction.
 func (tx *Tx) Begin(ctx context.Context) (Conn, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	newTx, err := tx.Tx.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -30,5 +34,9 @@ func (tx *Tx) Begin(ctx context.Context) (Conn, error) {
 //
 // Any other failure of a real transaction will result in the connection being closed.
 func (tx *Tx) Close(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	return tx.Tx.Rollback(ctx)
 }

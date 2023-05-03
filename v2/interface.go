@@ -47,4 +47,14 @@ type Conn interface {
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (commandTag pgconn.CommandTag, err error)
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+
+	// Lock creates a session-wide advisory lock on a connection, and a transactional advisory
+	// lock on a transaction.  Will block until the lock is available.  Returns an AdvsioryLock,
+	// which must be released when you're done with the lock.
+	Lock(ctx context.Context, id uint64) (AdvisoryLock, error)
+
+	// TryLock tries to create a swssion-wide or transactional advisory lock, based on the
+	// connection type.  If successful, returns an AdvisoryLock which must be released when
+	// you're done with it.  If unsuccessful (lock is in use), returns an ErrLocked error.
+	TryLock(ctx context.Context, id uint64) (AdvisoryLock, error)
 }

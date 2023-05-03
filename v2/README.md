@@ -145,6 +145,58 @@ Using transactions, even if a test case fails a returns prematurely, the databas
 automatically closed, thanks to `defer`. The database is cleaned up without any fuss or need to
 remember to delete the data you created at any point in the test.
 
+## Advisory Locks
+
+Hermes provides a few support functions for managing PostgreSQL advisory locks.
+
+* `hermes.Conn.Lock` creates a session-wide, exclusive advisory lock when called on the root database pool
+* `hermes.Conn.Lock` creates a transaction-wide, exclusive advisory lock when called on a transaction connection
+
+Both functions return an `AdvisoryLock`, which should then be released to release the lock.
+
+    db, err := hermes.Connect(DBTestURI)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
+        os.Exit(1)
+    }
+    defer conn.Close()
+
+    // Session-wide advisory lock (lock ID = 22)
+    lock, err := db.Lock(ctx, 22)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to create advisory lock: %s\n", err)
+        os.Exit(1)
+    }
+    defer lock.Release()
+
+    tx, err := db.Begin(ctx)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Could not create a transaction: %s\n", err)
+        os.Exit(1)
+    }
+
+    // This will release a transaction advisory lock
+    defer tx.Close()
+
+    // Transaction-level advisory lock
+    lock, err := db.Lock(ctx, 22)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to create advisory lock: %s\n", err)
+        os.Exit(1)
+    }
+    // Technically this doesn't release the lock, but it's good practice
+    defer lock.Release()
+
+    // ...
+
+    // This will also release the transactional advisory lock...
+    tx.Commit(ctx)
+
+Note that technically the transaction-level advisory lock doesn't require a call to `Release`; as
+it will close automatically when the transaction ends. However, it's a good idea to call `Release`
+regardless; that way if the `conn` is acting as a basic connection, it requires the release, and
+if it's a transaction it doesn't hurt.
+
 ## Deprecated
 
 The pgx package changes how custom types are handled.
