@@ -197,6 +197,15 @@ it will close automatically when the transaction ends. However, it's a good idea
 regardless; that way if the `conn` is acting as a basic connection, it requires the release, and
 if it's a transaction it doesn't hurt.
 
+You may also "try" a lock, using the try functions:
+
+    lock, err := db.TryLock(ctx, 22)
+    lock, err := tx.TryLock(ctx, 22)
+
+This will either return an advisory lock if it's available, or it will immediately return `ErrLocked`
+if it's not. This can be used in situations where if one instance of an app finds the lock, it
+can safely assume another instance is performing the function, such as cleaning up the database.
+
 ## Deprecated
 
 The pgx package changes how custom types are handled.
