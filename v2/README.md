@@ -1,4 +1,4 @@
-# Hermes PGX 2.0.0
+# Hermes PGX 2.1.0
 
 Hermes PGX is an update to the https://github.com/sbowman/hermes package that wraps
 https://github.com/jackc/pgx in place of the older https://github.com/lib/pq package. This package
@@ -13,10 +13,12 @@ to build database APIs for Go applications.
 Note that because this package is based on pgx, it only supports PostgreSQL. If you're using another
 database, https://github.com/sbowman/hermes remains agnostic.
 
-Hermes v2.0.0 upgrades support for https://github.com/jackc/pgx `v2`.
+Hermes v2.1.0 upgrades support for https://github.com/jackc/pgx package to `v5`.
 
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/sbowman/hermes-pgx)
 ![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)
+
+    go get github.com/sbowman/hermes-pgx/v2
 
 ## Usage
 
