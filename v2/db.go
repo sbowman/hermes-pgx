@@ -37,7 +37,15 @@ func (db *DB) Rollback(context.Context) error {
 	return nil
 }
 
-// Close does nothing.
+// Close does nothing.  Since this Close method is meant to be used interchangably with
+// transactions, it doesn't actually close anything, because we don't want to close the underlying
+// database pool at the end of every non-transactional request.  Instead, see DB.Shutdown.
 func (db *DB) Close(context.Context) error {
 	return nil
+}
+
+// Shutdown the underlying pgx Pool.  You should call this when your application is closing to
+// release all the database pool connections.
+func (db *DB) Shutdown() {
+	db.Pool.Close()
 }

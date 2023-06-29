@@ -10,6 +10,9 @@ func (db *DB) SetTimeout(dur time.Duration) {
 	db.defaultTimeout = dur
 }
 
+// Used for WithTimeout calls that already have a deadline.
+func fakeCancel() {}
+
 // WithTimeout creates a context with a timeout, assigning ctx as the parent of the timeout context.
 // Returns the new context and its cancel function.  The timeout is based on the configured
 // database pool connection timeout (see `WithDefaultTimeout`).
@@ -20,6 +23,10 @@ func (db *DB) SetTimeout(dur time.Duration) {
 func (db *DB) WithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, fakeCancel
 	}
 
 	timeout := db.defaultTimeout
@@ -60,6 +67,10 @@ func (tx *Tx) SetTimeout(dur time.Duration) {
 func (tx *Tx) WithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, fakeCancel
 	}
 
 	timeout := tx.defaultTimeout
