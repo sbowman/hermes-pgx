@@ -13,7 +13,7 @@ to build database APIs for Go applications.
 Note that because this package is based on pgx, it only supports PostgreSQL. If you're using another
 database, https://github.com/sbowman/hermes remains agnostic.
 
-Hermes v2.1.0 upgrades support for https://github.com/jackc/pgx package to `v5`.
+Hermes v2.2.0 upgrades support for https://github.com/jackc/pgx package to `v5`.
 
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/sbowman/hermes-pgx/v2)
 ![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)
