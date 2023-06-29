@@ -1,4 +1,4 @@
-# Hermes PGX 2.1.0
+# Hermes PGX 2.2.0
 
 Hermes PGX is an update to the https://github.com/sbowman/hermes package that wraps
 https://github.com/jackc/pgx in place of the older https://github.com/lib/pq package. This package
