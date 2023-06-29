@@ -2,6 +2,7 @@ package hermes
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -9,6 +10,7 @@ import (
 // DB wraps the *pgxpool.Pool and provides the missing hermes function wrappers.
 type DB struct {
 	*pgxpool.Pool
+	defaultTimeout time.Duration
 }
 
 // Begin a new transaction.
@@ -22,7 +24,7 @@ func (db *DB) Begin(ctx context.Context) (Conn, error) {
 		return nil, err
 	}
 
-	return &Tx{tx}, nil
+	return &Tx{tx, db.defaultTimeout}, nil
 }
 
 // Commit does nothing.

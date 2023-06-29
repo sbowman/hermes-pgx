@@ -24,5 +24,5 @@ func ConnectConfig(config *pgxpool.Config) (*DB, error) {
 		return nil, err
 	}
 
-	return &DB{pool}, nil
+	return &DB{pool, 0}, nil
 }

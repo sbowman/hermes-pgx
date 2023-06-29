@@ -2,6 +2,7 @@ package hermes
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -57,4 +58,17 @@ type Conn interface {
 	// connection type.  If successful, returns an AdvisoryLock which must be released when
 	// you're done with it.  If unsuccessful (lock is in use), returns an ErrLocked error.
 	TryLock(ctx context.Context, id uint64) (AdvisoryLock, error)
+
+	// WithTimeout returns a timeout context configured with the timeout setting configured on
+	// the database connection pool.  If ctx is already has an expiration, simply returns the
+	// existing context.
+	WithTimeout(ctx context.Context) (context.Context, context.CancelFunc)
+
+	// SetTimeout sets the default timeout used for WithTimeout calls.
+	SetTimeout(dur time.Duration)
+
+	// BeginWithTimeout starts a custom transaction that manages the timeout context for you.
+	// If Conn already represents a transaction, pgx will create a savepoint instead.  This is
+	// experimental; use at your own risk!
+	BeginWithTimeout(ctx context.Context) (*ContextualTx, error)
 }

@@ -2,6 +2,7 @@ package hermes
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -9,6 +10,7 @@ import (
 // Tx wraps the pgx.Tx interface and provides the missing hermes function wrappers.
 type Tx struct {
 	pgx.Tx
+	defaultTimeout time.Duration
 }
 
 // Begin starts a pseudo nested transaction.
@@ -22,7 +24,7 @@ func (tx *Tx) Begin(ctx context.Context) (Conn, error) {
 		return nil, err
 	}
 
-	return &Tx{newTx}, nil
+	return &Tx{newTx, tx.defaultTimeout}, nil
 }
 
 // Close rolls back the transaction if this is a real transaction or rolls back to the
