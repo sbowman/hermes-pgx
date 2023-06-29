@@ -94,7 +94,7 @@ rollback at the end of the test to clean up.
 	        fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
 	        os.Exit(1)
     	}
-    	defer conn.Close()
+    	defer conn.Shutdown()
     	
     	DB = conn
     	
@@ -147,6 +147,20 @@ Using transactions, even if a test case fails a returns prematurely, the databas
 automatically closed, thanks to `defer`. The database is cleaned up without any fuss or need to
 remember to delete the data you created at any point in the test.
 
+### Shutting down the connection pool
+
+Note that because Hermes overloads the concept of `db.Close()` and `tx.Close()`, `db.Close()`
+doesn't actually do anything. In pgx, `db.Close()` would close the connection pool, which we
+don't want. So instead, call `hermes.DB.Shutdown()` to clean up your connection pool when your
+app shuts down.
+
+    db, err := hermes.Connect(DBTestURI)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
+        os.Exit(1)
+    }
+    defer db.Shutdown()
+
 ## Advisory Locks
 
 Hermes provides a few support functions for managing PostgreSQL advisory locks.
@@ -161,7 +175,7 @@ Both functions return an `AdvisoryLock`, which should then be released to releas
         fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
         os.Exit(1)
     }
-    defer conn.Close()
+    defer db.Shutdown()
 
     // Session-wide advisory lock (lock ID = 22)
     lock, err := db.Lock(ctx, 22)
@@ -207,6 +221,96 @@ You may also "try" a lock, using the try functions:
 This will either return an advisory lock if it's available, or it will immediately return `ErrLocked`
 if it's not. This can be used in situations where if one instance of an app finds the lock, it
 can safely assume another instance is performing the function, such as cleaning up the database.
+
+## Timeouts (v2.2.0)
+
+Hermes v2.2.0 adds support for carrying connection timeout information with the `hermes.Conn`
+objects. This can make it easier to create connections that don't get stuck if the database goes
+away.
+
+First, set the timeout on the `hermes.Conn` or `hermes.DB` as a default when you connect to the
+database:
+
+    db, err := hermes.Connect(DBTestURI)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
+        os.Exit(1)
+    }
+    defer db.Shutdown()
+
+    db.SetTimeout(config.DBTimeout)  // if config.DBTimeout refers to a setting somewhere
+
+Then you can leverage the `hermes.Conn.WithTimeout` method to create a timeout context and a cancel
+function for you to use when making database requests:
+
+    ctx, cancel := conn.WithTimeout(ctx) // you may also pass nil if you don't have a context
+    defer cancel()
+
+    rows, err := conn.Query(ctx, "select * from users")
+
+Transactions also support `SetTimeout`, if you want to override the default, though it's not
+typically necessary.
+
+If you want to override the default timeout and support a longer running connection, simply pass in
+your own context with a deadline and Hermes will "fake" a timeout context and simply use yours:
+
+    // Elsewhere...
+    func GetUser(ctx context.Context, conn hermes.Conn, email string) (User, error) {
+        ctx, cancel := conn.WithTimeout(ctx)
+        defer cancel()
+
+        row := conn.QueryRow(ctx, "select * from users where email = $1", email)
+        
+        // ... load the user ...
+
+        return user, nil
+    }
+
+    func main() {
+        conn, err := hermes.Connect(DBTestURI)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Unable to open a database connection: %s\n", err)
+            os.Exit(1)
+        }
+        defer conn.Shutdown()
+
+        conn.SetTimeout(time.Second)  
+
+        // For some reason it takes a long time to get a user...
+        ctx, cancel := context.WithTimeout(ctx, time.Minute)
+        defer cancel()
+
+        // If the default for db is 1 second, but the context is set to timeout in a minute, this
+        // call may take as long as a minute:
+        user, err := GetUser(ctx, conn, "jdoe@nowhere.com")
+
+### ContextualTx prototype
+
+There's also a "contextual" transaction that tries to manage the timeout for you. It's experimental,
+but may be worth a look. Simply call `conn.BeginWithTimeout` rather than `conn.Begin` to create
+a transaction. You can then skip passing in a context to every request and use the context
+maintained internally in the transaction:
+
+    tx, err := conn.BeginWithTimeout(ctx) // if ctx already has a deadline, that deadline is used
+    if err != nil {
+        return err
+    }
+    defer tx.Close() // this will cancel the timeout context
+
+    var userID int
+    row := tx.QueryRow("select id from users where email = $1", email)
+    if err := row.Scan(&userID); err != nil {
+        return err
+    }
+
+    tx.Exec("insert into admin_users values ($1)", userID
+    return tx.Commit()
+
+If `ctx` above is nil or doesn't have a deadline, `BeginWithTimeout` will use the default timeout
+and create a context it carries around with the transaction. If `ctx` does have a deadline, it'll
+use that existing context as the underlying context. Every database request will have that context
+attached to it automatically, and when you call `tx.Close()` the `context.CancelFunc` is called
+as prescribed by the `context` package.
 
 ## Deprecated
 
